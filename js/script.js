@@ -18,9 +18,11 @@ scene.add(pyramidGroup);
 
 const textureLoader = new THREE.TextureLoader();
 const selectSound = new Audio('https://cdn.freesound.org/previews/237/237422_4284968-lq.ogg');
-const removeSound = new Audio('https://cdn.freesound.org/previews/545/545338_12183728-lq.ogg');
+const removeSound = new Audio('https://cdn.freesound.org/previews/339/339129_2887210-lq.ogg');
+const errorSound = new Audio('https://cdn.freesound.org/previews/545/545338_12183728-lq.ogg');
 selectSound.onerror = () => console.warn('Failed to load select sound');
 removeSound.onerror = () => console.warn('Failed to load remove sound');
+errorSound.onerror = () => console.warn('Failed to load error sound');
 
 // Уровни сложности
 const difficultyLevels = {
@@ -114,10 +116,10 @@ Promise.all(texturePromises).then((textures) => {
 
     // UI элементы
     const menuContainer = document.createElement('div');
-    menuContainer.classList.add('menu'); 
-    document.body.appendChild(menuContainer);       
+    menuContainer.classList.add('menu');
+    document.body.appendChild(menuContainer);
     if (!document.getElementById('score')) {
-    
+
 
         const newGameBtn = document.createElement('button');
         newGameBtn.id = 'new-game';
@@ -133,25 +135,25 @@ Promise.all(texturePromises).then((textures) => {
 
         const scoreDiv = document.createElement('div');
         scoreDiv.classList.add('score');
-        scoreDiv.id = 'score';  
+        scoreDiv.id = 'score';
         menuContainer.appendChild(scoreDiv);
-       
+
 
         // Добавляем кнопки выбора сложности
         const difficultyContainer = document.createElement('div');
-        difficultyContainer.classList.add('difficulty');   
+        difficultyContainer.classList.add('difficulty');
 
         ['easy', 'medium', 'hard'].forEach((level, index) => {
             const btn = document.createElement('button');
             btn.classList.add('btn', 'difficulty-btn');
-            btn.innerText = level.charAt(0).toUpperCase() + level.slice(1); 
+            btn.innerText = level.charAt(0).toUpperCase() + level.slice(1);
             btn.addEventListener('click', () => {
                 updateDifficulty(level);
                 initializeGame();
             });
             difficultyContainer.appendChild(btn);
-        });      
-        document.body.appendChild(difficultyContainer);       
+        });
+        document.body.appendChild(difficultyContainer);
     }
 
     function createPyramid() {
@@ -216,7 +218,19 @@ Promise.all(texturePromises).then((textures) => {
         const intersects = raycaster.intersectObjects(tiles);
         if (intersects.length > 0) {
             const clickedTile = intersects[0].object;
-            if (!clickedTile.userData.available) return;
+
+            // Проверяем доступность фишек
+            if (!clickedTile.userData.available) {
+                // Подсвечиваем красным на 0.5 секунды и проигрываем звук
+                clickedTile.material.emissive.set(0xff0000);
+                errorSound.play().catch(e => console.error('Error sound playback failed:', e));
+                setTimeout(() => {
+                    clickedTile.material.emissive.set(0x000000);
+                }, 500);
+                return;
+            }
+
+            // Существующая логика для доступных фишек
             const index = selectedTiles.indexOf(clickedTile);
             if (index !== -1) {
                 selectedTiles.splice(index, 1);
